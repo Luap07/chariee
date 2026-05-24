@@ -8,11 +8,6 @@ import { RiComputerFill } from "react-icons/ri";
 import { GiOpenBook, GiWhiteBook } from 'react-icons/gi';
 import { FaBloggerB } from 'react-icons/fa';
 
-// FIXED: Key is completely hardcoded into the string instance to avoid any environment lookups
-const ai = new GoogleGenAI({
-  apiKey: "AIzaSyBIQO_6d2p_tZxV4f6yjGZQ9Z59Kij_o6M",
-});
-
 const App = () => {
   const [screen, setScreen] = useState(1);
   const [prompt, setPrompt] = useState("");
@@ -21,26 +16,27 @@ const App = () => {
 
   const messagesEndRef = useRef(null);
 
-  // Auto scroll
+  // AUTO SCROLL
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: 'smooth'
     });
   }, [data, loading]);
 
+  // GET AI RESPONSE
   async function getResponse(currentPrompt) {
     const textToSend = currentPrompt || prompt;
 
-    // Prevent empty requests
+    // EMPTY INPUT
     if (!textToSend.trim()) {
       alert("Please enter a prompt!");
       return;
     }
 
-    // Prevent spam clicking
+    // PREVENT SPAM
     if (loading) return;
 
-    // Add user message
+    // SHOW USER MESSAGE
     setData(prevData => [
       ...prevData,
       {
@@ -54,15 +50,30 @@ const App = () => {
     setLoading(true);
 
     try {
+      // Fetch key dynamically inside the execution loop to avoid undefined initialization errors on build
+      const targetApiKey = import.meta.env.VITE_GEMINI_API_KEY || 
+        (typeof process !== 'undefined' ? process.env.VITE_GEMINI_API_KEY : undefined);
+
+      if (!targetApiKey) {
+        throw new Error("API Key is missing. Check your Vercel Environment Variables setup.");
+      }
+
+      // Initialize inside the function scope to enforce runtime variable checks
+      const ai = new GoogleGenAI({ apiKey: targetApiKey });
+
+      // GEMINI REQUEST
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "models/gemini-flash-latest", // Updated to stable 2.5 production syntax for the modern SDK
         contents: textToSend,
       });
 
-      // Safe response handling
-      const text = response?.text || "No response generated.";
+      // SAFE RESPONSE EXTRACTION
+      const text =
+        response?.text ||
+        response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "No response generated.";
 
-      // Add AI message
+      // SHOW AI MESSAGE
       setData(prevData => [
         ...prevData,
         {
@@ -73,12 +84,31 @@ const App = () => {
 
     } catch (error) {
       console.error("Gemini Error:", error);
+      let errorMessage = "Something went wrong.";
 
+      // QUOTA LIMIT
+      if (error.message?.includes("429")) {
+        errorMessage = "Gemini API limit reached. Please wait a minute and try again.";
+      }
+      // INVALID KEY
+      else if (error.message?.toLowerCase().includes("api key") || error.message?.includes("missing")) {
+        errorMessage = "Invalid or missing Gemini API key configuration on Vercel.";
+      }
+      // NETWORK ISSUES
+      else if (error.message?.toLowerCase().includes("fetch")) {
+        errorMessage = "Network error. Check your internet connection.";
+      }
+      // GENERIC ERROR
+      else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // SHOW ERROR
       setData(prevData => [
         ...prevData,
         {
           role: "ai",
-          content: "Apologies, I encountered an issue computing that update."
+          content: errorMessage
         }
       ]);
 
@@ -87,7 +117,7 @@ const App = () => {
     }
   }
 
-  // Suggestion cards
+  // CARD CLICK
   const handleCardClick = (suggestionText) => {
     getResponse(suggestionText);
   };
@@ -96,7 +126,7 @@ const App = () => {
     <div className="flex flex-col h-screen overflow-hidden bg-black text-white">
       <Navbar />
 
-      {/* CHAT AREA */}
+      {/* MAIN CHAT */}
       <div className="flex-1 overflow-y-auto no-scrollbar w-full max-w-4xl mx-auto px-4 md:px-6">
         {
           screen === 1 ? (
@@ -105,62 +135,38 @@ const App = () => {
                 Chariee.<span className='text-blue-500'>ai</span>
               </h3>
 
-              {/* SUGGESTION CARDS */}
+              {/* SUGGESTIONS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4">
                 <div
-                  onClick={() =>
-                    handleCardClick("Create a website using html css and js.")
-                  }
+                  onClick={() => handleCardClick("Create a website using html css and js.")}
                   className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-5"
                 >
-                  <i className='text-3xl text-blue-500'>
-                    <RiComputerFill />
-                  </i>
-                  <p className='mt-3 text-zinc-300 font-medium'>
-                    Create a website using html css and js.
-                  </p>
+                  <i className='text-3xl text-blue-500'><RiComputerFill /></i>
+                  <p className='mt-3 text-zinc-300 font-medium'>Create a website using html css and js.</p>
                 </div>
 
                 <div
-                  onClick={() =>
-                    handleCardClick("Write a book for me. topic is coding.")
-                  }
+                  onClick={() => handleCardClick("Write a book for me. topic is coding.")}
                   className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-5"
                 >
-                  <i className='text-3xl text-purple-500'>
-                    <GiWhiteBook />
-                  </i>
-                  <p className='mt-3 text-zinc-300 font-medium'>
-                    Write a book for me. topic is coding.
-                  </p>
+                  <i className='text-3xl text-purple-500'><GiWhiteBook /></i>
+                  <p className='mt-3 text-zinc-300 font-medium'>Write a book for me. topic is coding.</p>
                 </div>
 
                 <div
-                  onClick={() =>
-                    handleCardClick("Tell me a comedy story.")
-                  }
+                  onClick={() => handleCardClick("Tell me a comedy story.")}
                   className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-5"
                 >
-                  <i className='text-3xl text-amber-500'>
-                    <GiOpenBook />
-                  </i>
-                  <p className='mt-3 text-zinc-300 font-medium'>
-                    Tell me a comedy story.
-                  </p>
+                  <i className='text-3xl text-amber-500'><GiOpenBook /></i>
+                  <p className='mt-3 text-zinc-300 font-medium'>Tell me a comedy story.</p>
                 </div>
 
                 <div
-                  onClick={() =>
-                    handleCardClick("Create a blog for me topic is web dev.")
-                  }
+                  onClick={() => handleCardClick("Create a blog for me topic is web dev.")}
                   className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-5"
                 >
-                  <i className='text-3xl text-emerald-500'>
-                    <FaBloggerB />
-                  </i>
-                  <p className='mt-3 text-zinc-300 font-medium'>
-                    Create a blog for me topic is web dev.
-                  </p>
+                  <i className='text-3xl text-emerald-500'><FaBloggerB /></i>
+                  <p className='mt-3 text-zinc-300 font-medium'>Create a blog for me topic is web dev.</p>
                 </div>
               </div>
             </div>
@@ -193,7 +199,7 @@ const App = () => {
                 })
               }
 
-              {/* LOADING */}
+              {/* LOADER */}
               {
                 loading && (
                   <div className="flex justify-start pl-2">
@@ -203,14 +209,13 @@ const App = () => {
                   </div>
                 )
               }
-
               <div ref={messagesEndRef} />
             </div>
           )
         }
       </div>
 
-      {/* INPUT AREA */}
+      {/* INPUT */}
       <div className="pb-6 px-4 w-full">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
@@ -219,9 +224,7 @@ const App = () => {
               value={prompt}
               placeholder='Enter your prompt...'
               className='flex-1 bg-transparent py-3 px-1 outline-none text-lg text-white placeholder:text-zinc-500'
-              onChange={(e) => {
-                setPrompt(e.target.value)
-              }}
+              onChange={(e) => { setPrompt(e.target.value) }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !loading) {
                   getResponse();
@@ -235,7 +238,7 @@ const App = () => {
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 transition-all px-5 py-3 rounded-xl font-medium disabled:opacity-50"
             >
-              Send
+              {loading ? "Loading..." : "Send"}
             </button>
           </div>
 
@@ -244,7 +247,6 @@ const App = () => {
           </p>
         </div>
       </div>
-
     </div>
   )
 }
