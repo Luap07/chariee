@@ -47,7 +47,7 @@ const App = () => {
     setLoading(true);
 
     try {
-      // Dynamic runtime configuration to dodge build pipeline issues and push blocks
+      // Dynamic runtime configuration to evade build compilation locks
       const targetApiKey = import.meta.env.VITE_GEMINI_API_KEY || 
         (typeof process !== 'undefined' ? process.env.VITE_GEMINI_API_KEY : undefined);
 
@@ -57,6 +57,7 @@ const App = () => {
 
       const ai = new GoogleGenAI({ apiKey: targetApiKey });
 
+      // FIX: Clean production-stable model mapping matching modern SDK standards
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: textToSend,
@@ -79,17 +80,18 @@ const App = () => {
       console.error("Gemini Error:", error);
       let errorMessage = "Something went wrong.";
 
-      if (error.message?.includes("429")) {
+      // Detailed accurate state reporting prevents fake 429 loops
+      if (error.status === 429 || error.message?.includes("429")) {
         errorMessage = "Gemini API limit reached. Please wait a minute and try again.";
       }
       else if (error.message?.toLowerCase().includes("api key") || error.message?.includes("missing")) {
         errorMessage = "Invalid or missing Gemini API key configuration on Vercel.";
       }
-      else if (error.message?.toLowerCase().includes("fetch")) {
+      else if (error.message?.toLowerCase().includes("fetch") || error.message?.toLowerCase().includes("network")) {
         errorMessage = "Network error. Check your internet connection.";
       }
       else if (error.message) {
-        errorMessage = error.message;
+        errorMessage = error.message; // Yield exact system failure descriptions directly
       }
 
       setData(prevData => [
@@ -110,7 +112,6 @@ const App = () => {
   };
 
   return (
-    // FIX: Using h-[100dvh] prevents mobile browsers' collapsing address bars from driving the layout out of frame
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-black text-white">
       <Navbar />
 
@@ -206,7 +207,6 @@ const App = () => {
       {/* INPUT AREA */}
       <div className="pb-4 md:pb-6 px-3 md:px-4 w-full bg-black">
         <div className="max-w-4xl mx-auto">
-          {/* FIX: Optimized layout bounds and input paddings for consistent fitness across mobile devices */}
           <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-1.5 md:p-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
             <input
               type="text"
@@ -221,7 +221,7 @@ const App = () => {
               }}
             />
 
-            {/* SEND BUTTON - FIXED STRUCTURAL PRIORITIZATION */}
+            {/* SEND BUTTON */}
             <button
               onClick={() => getResponse()}
               disabled={loading}
