@@ -27,16 +27,13 @@ const App = () => {
   async function getResponse(currentPrompt) {
     const textToSend = currentPrompt || prompt;
 
-    // EMPTY INPUT
     if (!textToSend.trim()) {
       alert("Please enter a prompt!");
       return;
     }
 
-    // PREVENT SPAM
     if (loading) return;
 
-    // SHOW USER MESSAGE
     setData(prevData => [
       ...prevData,
       {
@@ -50,7 +47,7 @@ const App = () => {
     setLoading(true);
 
     try {
-      // Fetch key dynamically inside the execution loop to avoid undefined initialization errors on build
+      // Dynamic runtime configuration to dodge build pipeline issues and push blocks
       const targetApiKey = import.meta.env.VITE_GEMINI_API_KEY || 
         (typeof process !== 'undefined' ? process.env.VITE_GEMINI_API_KEY : undefined);
 
@@ -58,22 +55,18 @@ const App = () => {
         throw new Error("API Key is missing. Check your Vercel Environment Variables setup.");
       }
 
-      // Initialize inside the function scope to enforce runtime variable checks
       const ai = new GoogleGenAI({ apiKey: targetApiKey });
 
-      // GEMINI REQUEST
       const response = await ai.models.generateContent({
-        model: "models/gemini-flash-latest", // Updated to stable 2.5 production syntax for the modern SDK
+        model: "gemini-2.5-flash",
         contents: textToSend,
       });
 
-      // SAFE RESPONSE EXTRACTION
       const text =
         response?.text ||
         response?.candidates?.[0]?.content?.parts?.[0]?.text ||
         "No response generated.";
 
-      // SHOW AI MESSAGE
       setData(prevData => [
         ...prevData,
         {
@@ -86,24 +79,19 @@ const App = () => {
       console.error("Gemini Error:", error);
       let errorMessage = "Something went wrong.";
 
-      // QUOTA LIMIT
       if (error.message?.includes("429")) {
         errorMessage = "Gemini API limit reached. Please wait a minute and try again.";
       }
-      // INVALID KEY
       else if (error.message?.toLowerCase().includes("api key") || error.message?.includes("missing")) {
         errorMessage = "Invalid or missing Gemini API key configuration on Vercel.";
       }
-      // NETWORK ISSUES
       else if (error.message?.toLowerCase().includes("fetch")) {
         errorMessage = "Network error. Check your internet connection.";
       }
-      // GENERIC ERROR
       else if (error.message) {
         errorMessage = error.message;
       }
 
-      // SHOW ERROR
       setData(prevData => [
         ...prevData,
         {
@@ -117,61 +105,61 @@ const App = () => {
     }
   }
 
-  // CARD CLICK
   const handleCardClick = (suggestionText) => {
     getResponse(suggestionText);
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-black text-white">
+    // FIX: Using h-[100dvh] prevents mobile browsers' collapsing address bars from driving the layout out of frame
+    <div className="flex flex-col h-[100dvh] overflow-hidden bg-black text-white">
       <Navbar />
 
       {/* MAIN CHAT */}
       <div className="flex-1 overflow-y-auto no-scrollbar w-full max-w-4xl mx-auto px-4 md:px-6">
         {
           screen === 1 ? (
-            <div className="w-full h-full flex items-center justify-center flex-col py-10">
-              <h3 className='text-5xl font-bold tracking-tight mb-8'>
+            <div className="w-full min-h-full flex items-center justify-center flex-col py-6 md:py-10">
+              <h3 className='text-4xl md:text-5xl font-bold tracking-tight mb-6 md:mb-8 text-center'>
                 Chariee.<span className='text-blue-500'>ai</span>
               </h3>
 
               {/* SUGGESTIONS */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 w-full max-w-2xl px-2 sm:px-4">
                 <div
                   onClick={() => handleCardClick("Create a website using html css and js.")}
-                  className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-5"
+                  className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-4 md:p-5"
                 >
-                  <i className='text-3xl text-blue-500'><RiComputerFill /></i>
-                  <p className='mt-3 text-zinc-300 font-medium'>Create a website using html css and js.</p>
+                  <i className='text-2xl md:text-3xl text-blue-500'><RiComputerFill /></i>
+                  <p className='mt-2 md:mt-3 text-sm md:text-base text-zinc-300 font-medium'>Create a website using html css and js.</p>
                 </div>
 
                 <div
                   onClick={() => handleCardClick("Write a book for me. topic is coding.")}
-                  className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-5"
+                  className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-4 md:p-5"
                 >
-                  <i className='text-3xl text-purple-500'><GiWhiteBook /></i>
-                  <p className='mt-3 text-zinc-300 font-medium'>Write a book for me. topic is coding.</p>
+                  <i className='text-2xl md:text-3xl text-purple-500'><GiWhiteBook /></i>
+                  <p className='mt-2 md:mt-3 text-sm md:text-base text-zinc-300 font-medium'>Write a book for me. topic is coding.</p>
                 </div>
 
                 <div
                   onClick={() => handleCardClick("Tell me a comedy story.")}
-                  className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-5"
+                  className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-4 md:p-5"
                 >
-                  <i className='text-3xl text-amber-500'><GiOpenBook /></i>
-                  <p className='mt-3 text-zinc-300 font-medium'>Tell me a comedy story.</p>
+                  <i className='text-2xl md:text-3xl text-amber-500'><GiOpenBook /></i>
+                  <p className='mt-2 md:mt-3 text-sm md:text-base text-zinc-300 font-medium'>Tell me a comedy story.</p>
                 </div>
 
                 <div
                   onClick={() => handleCardClick("Create a blog for me topic is web dev.")}
-                  className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-5"
+                  className="card cursor-pointer bg-zinc-950 border border-zinc-900 transition-all hover:bg-zinc-900 rounded-xl p-4 md:p-5"
                 >
-                  <i className='text-3xl text-emerald-500'><FaBloggerB /></i>
-                  <p className='mt-3 text-zinc-300 font-medium'>Create a blog for me topic is web dev.</p>
+                  <i className='text-2xl md:text-3xl text-emerald-500'><FaBloggerB /></i>
+                  <p className='mt-2 md:mt-3 text-sm md:text-base text-zinc-300 font-medium'>Create a blog for me topic is web dev.</p>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="w-full flex flex-col gap-5 py-8">
+            <div className="w-full flex flex-col gap-4 md:gap-5 py-4 md:py-8">
               {
                 data.map((item, index) => {
                   const isUser = item.role === "user";
@@ -181,16 +169,16 @@ const App = () => {
                       className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[80%] md:max-w-[75%] rounded-2xl px-5 py-4 text-[16px] leading-relaxed shadow-sm ${
+                        className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-4 py-3 md:px-5 md:py-4 text-sm md:text-base leading-relaxed shadow-sm ${
                           isUser
                             ? 'bg-blue-600 text-white rounded-br-none'
                             : 'bg-zinc-900 border border-zinc-800 text-zinc-100 rounded-bl-none'
                         }`}
                       >
-                        <p className='text-[11px] uppercase tracking-wider font-bold mb-1 opacity-60'>
+                        <p className='text-[10px] md:text-[11px] uppercase tracking-wider font-bold mb-1 opacity-60'>
                           {isUser ? "User" : "Chariee.ai"}
                         </p>
-                        <div className="prose prose-invert max-w-none">
+                        <div className="prose prose-invert max-w-none text-sm md:text-base">
                           <Markdown>{item.content}</Markdown>
                         </div>
                       </div>
@@ -203,8 +191,8 @@ const App = () => {
               {
                 loading && (
                   <div className="flex justify-start pl-2">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 rounded-bl-none">
-                      <BeatLoader size={10} color='#3b82f6' />
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 md:px-5 md:py-4 rounded-bl-none">
+                      <BeatLoader size={8} color='#3b82f6' />
                     </div>
                   </div>
                 )
@@ -215,15 +203,16 @@ const App = () => {
         }
       </div>
 
-      {/* INPUT */}
-      <div className="pb-6 px-4 w-full">
+      {/* INPUT AREA */}
+      <div className="pb-4 md:pb-6 px-3 md:px-4 w-full bg-black">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+          {/* FIX: Optimized layout bounds and input paddings for consistent fitness across mobile devices */}
+          <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-1.5 md:p-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
             <input
               type="text"
               value={prompt}
               placeholder='Enter your prompt...'
-              className='flex-1 bg-transparent py-3 px-1 outline-none text-lg text-white placeholder:text-zinc-500'
+              className='flex-1 bg-transparent py-2 md:py-3 px-2 outline-none text-base md:text-lg text-white placeholder:text-zinc-500 min-w-0'
               onChange={(e) => { setPrompt(e.target.value) }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !loading) {
@@ -232,17 +221,17 @@ const App = () => {
               }}
             />
 
-            {/* SEND BUTTON */}
+            {/* SEND BUTTON - FIXED STRUCTURAL PRIORITIZATION */}
             <button
               onClick={() => getResponse()}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 transition-all px-5 py-3 rounded-xl font-medium disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all px-4 py-2 md:px-5 md:py-3 rounded-xl font-medium text-sm md:text-base disabled:opacity-50 flex-shrink-0"
             >
-              {loading ? "Loading..." : "Send"}
+              {loading ? "..." : "Send"}
             </button>
           </div>
 
-          <p className='text-zinc-600 text-xs text-center mt-3'>
+          <p className='text-zinc-600 text-[10px] md:text-xs text-center mt-2'>
             Chariee.ai can make mistakes! Double-check critical computations.
           </p>
         </div>
